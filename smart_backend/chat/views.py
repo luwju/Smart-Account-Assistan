@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .logic.dialog_flow import DialogFlowManager
+from .logic.dialog_flow import DialogFlowManager  
 from .models import Conversation, Message
 import uuid
 
@@ -28,7 +28,7 @@ def chat_message(request):
     )
     
     # Process message
-    flow_manager = DialogFlowManager()
+    flow_manager = DialogFlowManager()  # Use the simple version
     current_state = request.data.get('current_state', {})
     bot_response = flow_manager.process_message(user_input, current_state)
     
@@ -47,6 +47,7 @@ def chat_message(request):
     
     return Response(response_data)
 
+# Keep the history function the same
 @api_view(['GET'])
 def get_conversation_history(request, session_id):
     try:
@@ -65,3 +66,4 @@ def get_conversation_history(request, session_id):
         return Response({'messages': history})
     except Conversation.DoesNotExist:
         return Response({'messages': []})
+    
