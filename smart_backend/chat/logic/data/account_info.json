@@ -1,0 +1,30 @@
+{
+  "individual": {
+    "name": "Individual Savings Account",
+    "documents": [
+      "Original National ID/Passport",
+      "2 Recent passport-size photos",
+      "TIN Certificate",
+      "Proof of income"
+    ],
+    "min_amount": 100,
+    "monthly_fee": 0,
+    "interest_rate": "5.0% per annum",
+    "features": [
+      "Free mobile banking",
+      "Visa/Mastercard debit card",
+      "24/7 customer support"
+    ],
+    "process_time": "1-2 business days"
+  },
+  "student": {
+    "name": "Student Account",
+    "documents": [
+      "Student ID card",
+      "Letter of admission"
+    ],
+    "min_amount": 50,
+    "monthly_fee": 0,
+    "process_time": "1 business day"
+  }
+}
