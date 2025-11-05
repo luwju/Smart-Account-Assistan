@@ -22,7 +22,7 @@ warnings.filterwarnings('ignore')
 # 🧠 Enhanced Knowledge Base: Account Opening & Onboarding
 # ==============================================
 onboarding_knowledge = {
-    "open account": "To open an account, you can start onboarding yourself using your National ID (NID). Once you enter or scan your NID, your information loads automatically. You'll then upload your signature and provide your mother's name for verification.",
+    "open account": "To open an account, you can start onboarding yourself using your National ID (NID). Once you enter or scan your FAN, your information loads automatically. You'll then upload your signature and provide your mother's name for verification.",
 
     "account types": "There are three main account types: Individual, Joint, and Cooperative (Company). Each can be opened under either the Saving or Alhuda category.",
 
@@ -64,12 +64,30 @@ class MenuType(Enum):
     SUPPORT = "support"
     ONBOARDING = "onboarding"
     LOANS = "loans"
+    INDIVIDUAL_DETAILS = "individual_details"
+    JOINT_DETAILS = "joint_details" 
+    COMPANY_DETAILS = "company_details"
 
 class ResponseType(Enum):
     OPTIONS = "options"
     MESSAGE = "message"
     MENU = "menu"
     QUICK_REPLIES = "quick_replies"
+
+# ==============================================
+# 🔧 JSON SERIALIZATION FIX
+# ==============================================
+
+def convert_enums_to_strings(obj):
+    """Recursively convert Enum objects to strings for JSON serialization"""
+    if isinstance(obj, dict):
+        return {k: convert_enums_to_strings(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_enums_to_strings(item) for item in obj]
+    elif isinstance(obj, Enum):
+        return obj.value
+    else:
+        return obj
 
 class BankingChatbotTrainer:
     def __init__(self):
@@ -221,15 +239,42 @@ class KnowledgeBaseManager:
         self.knowledge_base = onboarding_knowledge
         self.current_menu = MenuType.MAIN
         self.menus = self._initialize_menus()
+        self.user_selections = {}  # Track user choices
+    
+    def find_best_match(self, user_input: str) -> Optional[str]:
+        """
+        Matches user input with the most relevant key in the knowledge base.
+        """
+        user_input = user_input.lower().strip()
+        best_match = None
+        highest_ratio = 0
+
+        # Check for exact matches first
+        for key in self.knowledge_base.keys():
+            if key in user_input:
+                return self.knowledge_base[key]
+
+        # Then check for similar matches
+        for key in self.knowledge_base.keys():
+            ratio = SequenceMatcher(None, key, user_input).ratio()
+            if ratio > highest_ratio:
+                highest_ratio = ratio
+                best_match = key
+
+        # Match threshold for confidence
+        if highest_ratio > 0.5:
+            return self.knowledge_base[best_match]
+        
+        return None
     
     def _initialize_menus(self) -> Dict[MenuType, Dict]:
-        """Initialize all menu structures"""
+        """Initialize all menu structures with enhanced flows"""
         return {
             MenuType.MAIN: {
                 "title": "🏦 Welcome to Banking Services",
                 "subtitle": "How can I help you today?",
                 "options": [
-                    {"value": "open_account", "label": "📝 Open New Account", "menu": MenuType.ONBOARDING},
+                    {"value": "open_account", "label": "📝 Open New Acnt", "menu": MenuType.ONBOARDING},
                     {"value": "account_types", "label": "🏦 Account Types", "menu": MenuType.ACCOUNTS},
                     {"value": "loan_info", "label": "💰 Loans", "menu": MenuType.LOANS},
                     {"value": "banking_services", "label": "🛎️ Banking Services", "menu": MenuType.SERVICES},
@@ -243,15 +288,13 @@ class KnowledgeBaseManager:
                     {"value": "individual", "label": "👤 Individual Account"},
                     {"value": "joint", "label": "👥 Joint Account"},
                     {"value": "cooperative", "label": "🏢 Cooperative Account"},
-                    {"value": "alhuda", "label": "🕌 Alhuda Account"},
-                    {"value": "saving", "label": "💰 Saving Account"},
-                    {"value": "youth", "label": "🎓 Youth Account"},
+                    {"value": "other_account", "label": "❓ Other Questions"},
                     {"value": "back", "label": "⬅️ Back to Main Menu", "menu": MenuType.MAIN}
                 ]
             },
             MenuType.ONBOARDING: {
                 "title": "📝 Account Opening & Onboarding",
-                "subtitle": "What would you like to know?",
+                "subtitle": "What would you like to know about account opening?",
                 "options": [
                     {"value": "how_to_open", "label": "❓ How to Open Account"},
                     {"value": "requirements", "label": "📄 Requirements"},
@@ -259,6 +302,43 @@ class KnowledgeBaseManager:
                     {"value": "process", "label": "⚙️ Process Steps"},
                     {"value": "difference", "label": "🔄 Account Differences"},
                     {"value": "back", "label": "⬅️ Back to Main Menu", "menu": MenuType.MAIN}
+                ]
+            },
+            # NEW: Detailed account type menus
+            MenuType.INDIVIDUAL_DETAILS: {
+                "title": "👤 Individual Account Details",
+                "subtitle": "What would you like to know about Individual Accounts?",
+                "options": [
+                    {"value": "ind_documents", "label": "📄 Documents Required"},
+                    {"value": "ind_personal_info", "label": "👤 Personal Information"},
+                    {"value": "ind_processing_time", "label": "⏰ Processing Time"},
+                    {"value": "ind_features", "label": "⭐ Features & Benefits"},
+                    {"value": "back_to_accounts", "label": "⬅️ Back to Account Types", "menu": MenuType.ACCOUNTS},
+                    {"value": "main_menu", "label": "🏠 Main Menu", "menu": MenuType.MAIN}
+                ]
+            },
+            MenuType.JOINT_DETAILS: {
+                "title": "👥 Joint Account Details", 
+                "subtitle": "What would you like to know about Joint Accounts?",
+                "options": [
+                    {"value": "joint_documents", "label": "📄 Documents Required"},
+                    {"value": "joint_personal_info", "label": "👤 Personal Information"},
+                    {"value": "joint_processing_time", "label": "⏰ Processing Time"},
+                    {"value": "joint_features", "label": "⭐ Features & Benefits"},
+                    {"value": "back_to_accounts", "label": "⬅️ Back to Account Types", "menu": MenuType.ACCOUNTS},
+                    {"value": "main_menu", "label": "🏠 Main Menu", "menu": MenuType.MAIN}
+                ]
+            },
+            MenuType.COMPANY_DETAILS: {
+                "title": "🏢 Company Account Details",
+                "subtitle": "What would you like to know about Company Accounts?",
+                "options": [
+                    {"value": "company_documents", "label": "📄 Documents Required"},
+                    {"value": "company_info", "label": "🏢 Company Information"},
+                    {"value": "company_processing_time", "label": "⏰ Processing Time"},
+                    {"value": "company_features", "label": "⭐ Features & Benefits"},
+                    {"value": "back_to_accounts", "label": "⬅️ Back to Account Types", "menu": MenuType.ACCOUNTS},
+                    {"value": "main_menu", "label": "🏠 Main Menu", "menu": MenuType.MAIN}
                 ]
             },
             MenuType.LOANS: {
@@ -295,47 +375,24 @@ class KnowledgeBaseManager:
             }
         }
     
-    def find_best_match(self, user_input: str) -> Optional[str]:
-        """
-        Matches user input with the most relevant key in the knowledge base.
-        """
-        user_input = user_input.lower().strip()
-        best_match = None
-        highest_ratio = 0
-
-        # Check for exact matches first
-        for key in self.knowledge_base.keys():
-            if key in user_input:
-                return self.knowledge_base[key]
-
-        # Then check for similar matches
-        for key in self.knowledge_base.keys():
-            ratio = SequenceMatcher(None, key, user_input).ratio()
-            if ratio > highest_ratio:
-                highest_ratio = ratio
-                best_match = key
-
-        # Match threshold for confidence
-        if highest_ratio > 0.5:
-            return self.knowledge_base[best_match]
-        
-        return None
-    
     def get_menu_response(self, menu_type: MenuType) -> Dict:
         """Get structured menu response"""
         menu = self.menus[menu_type]
         self.current_menu = menu_type
-        return {
-            "type": ResponseType.MENU.value,
+        
+        response = {
+            "type": ResponseType.MESSAGE.value,
             "text": f"{menu['title']}\n\n{menu['subtitle']}",
             "menu_title": menu['title'],
             "menu_subtitle": menu['subtitle'],
             "options": menu['options'],
             "current_menu": menu_type.value
         }
+        
+        return response
     
     def handle_menu_selection(self, selection: str) -> Dict:
-        """Handle menu option selections"""
+        """Handle menu option selections with enhanced flow"""
         menu = self.menus[self.current_menu]
         selected_option = None
         
@@ -355,15 +412,34 @@ class KnowledgeBaseManager:
         return self._handle_menu_action(selection)
     
     def _handle_menu_action(self, selection: str) -> Dict:
-        """Handle specific menu actions"""
+        """Handle specific menu actions with enhanced details"""
         action_handlers = {
             MenuType.ACCOUNTS: {
-                "individual": lambda: self._get_knowledge_response("individual account"),
-                "joint": lambda: self._get_knowledge_response("joint account"),
-                "cooperative": lambda: self._get_knowledge_response("cooperative account"),
+                "individual": lambda: self.get_menu_response(MenuType.INDIVIDUAL_DETAILS),
+                "joint": lambda: self.get_menu_response(MenuType.JOINT_DETAILS),
+                "cooperative": lambda: self.get_menu_response(MenuType.COMPANY_DETAILS),
+                "other_account": lambda: self._get_other_account_response(),
                 "alhuda": lambda: self._get_knowledge_response("alhuda"),
                 "saving": lambda: self._get_knowledge_response("saving"),
                 "youth": lambda: self._get_knowledge_response("youth account")
+            },
+            MenuType.INDIVIDUAL_DETAILS: {
+                "ind_documents": lambda: self._get_detailed_response("individual", "documents"),
+                "ind_personal_info": lambda: self._get_detailed_response("individual", "personal_info"),
+                "ind_processing_time": lambda: self._get_detailed_response("individual", "processing_time"),
+                "ind_features": lambda: self._get_detailed_response("individual", "features")
+            },
+            MenuType.JOINT_DETAILS: {
+                "joint_documents": lambda: self._get_detailed_response("joint", "documents"),
+                "joint_personal_info": lambda: self._get_detailed_response("joint", "personal_info"), 
+                "joint_processing_time": lambda: self._get_detailed_response("joint", "processing_time"),
+                "joint_features": lambda: self._get_detailed_response("joint", "features")
+            },
+            MenuType.COMPANY_DETAILS: {
+                "company_documents": lambda: self._get_detailed_response("company", "documents"),
+                "company_info": lambda: self._get_detailed_response("company", "personal_info"),
+                "company_processing_time": lambda: self._get_detailed_response("company", "processing_time"),
+                "company_features": lambda: self._get_detailed_response("company", "features")
             },
             MenuType.ONBOARDING: {
                 "how_to_open": lambda: self._get_knowledge_response("how to open"),
@@ -383,14 +459,62 @@ class KnowledgeBaseManager:
         handler = action_handlers.get(self.current_menu, {}).get(selection)
         if handler:
             response = handler()
-            # Add navigation options
-            response["options"] = [
-                {"value": "back_to_menu", "label": "⬅️ Back to Menu"},
-                {"value": "main_menu", "label": "🏠 Main Menu"}
-            ]
+            # Add navigation options if not already present
+            if not response.get('options'):
+                response["options"] = [
+                    {"value": "back_to_menu", "label": "⬅️ Back to Menu"},
+                    {"value": "main_menu", "label": "🏠 Main Menu"}
+                ]
             return response
         
         return self._get_fallback_response()
+    
+    def _get_detailed_response(self, account_type: str, info_type: str) -> Dict:
+        """Get detailed information for specific account types"""
+        details = {
+            "individual": {
+                "documents": "📄 **Documents for Individual Account:**\n• Original National ID/Passport\n• 2 Recent passport-size photos\n• Tax Identification Number (TIN) Certificate\n• Proof of income (salary slip/bank statement)",
+                "personal_info": "👤 **Personal Information Required:**\n• Full name\n• Date of birth\n• National ID number\n• Mother's name\n• Contact information\n• Signature specimen",
+                "processing_time": "⏰ **Processing Time:** 1-2 business days\n\nOnce documents are submitted and verified, your account will be activated within 24-48 hours.",
+                "features": "⭐ **Individual Account Features:**\n• Free mobile banking\n• Visa/Mastercard debit card\n• Online banking access\n• SMS alerts\n• Checkbook facility\n• 24/7 customer support"
+            },
+            "joint": {
+                "documents": "📄 **Documents for Joint Account:**\n• Original National IDs for all applicants\n• 2 Recent passport-size photos each\n• Joint application form\n• TIN certificates for all applicants",
+                "personal_info": "👥 **Personal Information Required:**\n• Full names of all account holders\n• Dates of birth\n• National ID numbers\n• Mothers' names\n• Contact information\n• Signatures of all holders",
+                "processing_time": "⏰ **Processing Time:** 2-3 business days\n\nJoint accounts require verification of all applicants, which may take slightly longer.",
+                "features": "⭐ **Joint Account Features:**\n• Multiple signatories\n• Shared access to funds\n• Individual debit cards for each holder\n• Online banking for all holders\n• Flexible withdrawal limits"
+            },
+            "company": {
+                "documents": "📄 **Documents for Company Account:**\n• Certificate of Incorporation\n• Business registration documents\n• Company TIN certificate\n• Board resolution for account opening\n• IDs of authorized signatories\n• Company memorandum & articles",
+                "personal_info": "🏢 **Company Information Required:**\n• Company registration number\n• Business address\n• Nature of business\n• Directors' information\n• Authorized signatories\n• Company tax information",
+                "processing_time": "⏰ **Processing Time:** 3-5 business days\n\nCompany accounts require additional verification and legal documentation.",
+                "features": "⭐ **Company Account Features:**\n• Multiple authorized signatories\n• Higher transaction limits\n• Business online banking\n• Bulk payment facilities\n• Corporate debit cards\n• Dedicated relationship manager"
+            }
+        }
+        
+        response_text = details.get(account_type, {}).get(info_type, "Information not available.")
+        
+        return {
+            "type": ResponseType.MESSAGE.value,
+            "text": response_text,
+            "options": [
+                {"value": "back_to_details", "label": "⬅️ Back to Details"},
+                {"value": "back_to_accounts", "label": "🏦 Back to Account Types"},
+                {"value": "main_menu", "label": "🏠 Main Menu"}
+            ]
+        }
+    
+    def _get_other_account_response(self) -> Dict:
+        """Handle 'Other' account type selection"""
+        return {
+            "type": ResponseType.MESSAGE.value,
+            "text": "💬 **Other Questions**\n\nPlease type your specific question about accounts, and I'll help you with detailed information!\n\nYou can ask about:\n• Specific account features\n• Special requirements\n• Account comparisons\n• Any other banking questions",
+            "options": [
+                {"value": "enable_text_input", "label": "💬 Type My Question"},
+                {"value": "back_to_accounts", "label": "⬅️ Back to Account Types"},
+                {"value": "main_menu", "label": "🏠 Main Menu"}
+            ]
+        }
     
     def _get_knowledge_response(self, key: str) -> Dict:
         """Get response from knowledge base"""
@@ -435,7 +559,6 @@ class KnowledgeBaseManager:
             "text": "I'm here to help with your banking needs!",
             "options": self.menus[MenuType.MAIN]["options"]
         }
-
 class DialogFlowManager:
     """Enhanced DialogFlowManager with Knowledge Base and Menu System"""
     
@@ -671,13 +794,15 @@ class DialogFlowManager:
         if is_menu_selection:
             response = self.knowledge_manager.handle_menu_selection(user_input)
             self.response_history.append(response)
-            return response
+            # ✅ FIX: Clean response before returning
+            return convert_enums_to_strings(response)
         
         # Check for menu requests
         if any(word in user_input_lower for word in ['menu', 'options', 'help', 'what can you do', 'show menu']):
             response = self.knowledge_manager.get_menu_response(MenuType.MAIN)
             self.response_history.append(response)
-            return response
+            # ✅ FIX: Clean response before returning
+            return convert_enums_to_strings(response)
         
         # Use ML to predict intent
         ml_intent, confidence = self.trainer.predict(user_input)
@@ -694,7 +819,7 @@ class DialogFlowManager:
             if knowledge_response:
                 response = {
                     'text': knowledge_response,
-                    'type': ResponseType.MESSAGE.value,
+                    'type': ResponseType.MESSAGE.value,  # Use string value
                     'source': 'knowledge_base',
                     'confidence': confidence,
                     'options': [
@@ -717,7 +842,11 @@ class DialogFlowManager:
             response['detected_intent'] = ml_intent
             self.response_history.append(response)
         
-        return response if response else self._get_fallback_response()
+        # ✅ FIX: Convert Enum objects to strings before returning
+        final_response = response if response else self._get_fallback_response()
+        cleaned_response = convert_enums_to_strings(final_response)
+        
+        return cleaned_response
     
     def _handle_ml_intent(self, intent, user_input, session_id, preferred_type):
         """Handle message based on ML-predicted intent"""
@@ -809,7 +938,7 @@ class DialogFlowManager:
         
         return {
             'text': greeting,
-            'type': ResponseType.OPTIONS.value,
+            'type': ResponseType.OPTIONS.value,  # Use string value
             'options': self.knowledge_manager.menus[MenuType.MAIN]["options"]
         }
     
@@ -821,7 +950,7 @@ class DialogFlowManager:
             if knowledge_response:
                 return {
                     'text': knowledge_response,
-                    'type': ResponseType.MESSAGE.value,
+                    'type': ResponseType.MESSAGE.value,  # Use string value
                     'source': 'knowledge_base'
                 }
             return self._get_fallback_response()
@@ -840,7 +969,7 @@ What would you like to know about this account?
         
         return {
             'text': response_text,
-            'type': ResponseType.OPTIONS.value,
+            'type': ResponseType.OPTIONS.value,  # Use string value
             'options': [
                 {'value': 'documents', 'label': '📄 Documents'},
                 {'value': 'features', 'label': '⭐ Features'},
@@ -859,12 +988,12 @@ What would you like to know about this account?
         responses = {
             'account': {
                 'text': "✅ No problem! What other service can I help you with?",
-                'type': ResponseType.OPTIONS.value,
+                'type': ResponseType.OPTIONS.value,  # Use string value
                 'options': self.knowledge_manager.menus[MenuType.MAIN]["options"]
             },
             'loan': {
                 'text': "✅ Understood! Would you like information about other services?",
-                'type': ResponseType.OPTIONS.value,
+                'type': ResponseType.OPTIONS.value,  # Use string value
                 'options': [
                     {'value': 'accounts', 'label': '🏦 Accounts'},
                     {'value': 'services', 'label': '🛎️ Services'},
@@ -873,7 +1002,7 @@ What would you like to know about this account?
             },
             'general': {
                 'text': "✅ I understand. How else can I assist you today?",
-                'type': ResponseType.OPTIONS.value,
+                'type': ResponseType.OPTIONS.value,  # Use string value
                 'options': self.knowledge_manager.menus[MenuType.MAIN]["options"]
             }
         }
@@ -884,7 +1013,7 @@ What would you like to know about this account?
         """Get fallback response"""
         return {
             'text': "I'm here to help with your banking needs! What would you like to know?",
-            'type': ResponseType.OPTIONS.value,
+            'type': ResponseType.OPTIONS.value,  # Use string value
             'options': self.knowledge_manager.menus[MenuType.MAIN]["options"]
         }
     
@@ -962,4 +1091,12 @@ if __name__ == "__main__":
         print(f"Ela: {response.get('text', '')}")
         if response.get('options'):
             print("Options:", [opt['label'] for opt in response['options']])
+        
+        # Test JSON serialization
+        try:
+            import json
+            json_str = json.dumps(response)
+            print("✅ JSON serialization successful!")
+        except Exception as e:
+            print(f"❌ JSON serialization failed: {e}")
         print()

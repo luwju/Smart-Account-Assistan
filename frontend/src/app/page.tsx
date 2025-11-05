@@ -6,7 +6,7 @@ export default function Home() {
       {/* Your main website content */}
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold text-center text-gray-800 mb-4">
-          Welcome to Meboat
+          Welcome to Mebot
         </h1>
         <p className="text-center text-gray-600 mb-8">
           Your trusted banking partner

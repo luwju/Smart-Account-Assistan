@@ -2,6 +2,7 @@ import { BotResponse } from './types';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
+
 export const chatAPI = {
   sendMessage: async (message: string, sessionId?: string, currentState?: any): Promise<BotResponse> => {
     const response = await fetch(`${API_BASE_URL}/chat/`, {
@@ -11,8 +12,8 @@ export const chatAPI = {
       },
       body: JSON.stringify({
         message,
-        session_id: sessionId,
-        current_state: currentState || {}
+        session_id: sessionId,           // ✅ ADD THIS BACK
+        current_state: currentState || {} // ✅ ADD THIS BACK
       }),
     });
     
